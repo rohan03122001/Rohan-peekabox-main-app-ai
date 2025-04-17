@@ -1,0 +1,41 @@
+require('dotenv').config();
+
+const NODE_ENV = process.env.NODE_ENV || 'STAGING';
+const PORT = process.env.PORT || 8100;
+const MONGODB_STRING = process.env.MONGODB_STRING;
+
+const REDIS_HOST = process.env.REDIS_HOST;
+const REDIS_PORT = process.env.REDIS_PORT;
+const NOTIF_EMAIL = process.env.NOTIF_EMAIL;
+
+const USER_JWT_SECRET = process.env.USER_JWT_SECRET;
+const STORE_JWT_SECRET = process.env.STORE_JWT_SECRET;
+const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET;
+
+const USER_REFRESH_SECRET = process.env.USER_REFRESH_SECRET;
+const STORE_REFRESH_SECRET = process.env.STORE_REFRESH_SECRET;
+const ADMIN_REFRESH_SECRET = process.env.ADMIN_REFRESH_SECRET;
+
+const AWS_ACCESS_KEY = process.env.AWS_ACCESS_KEY;
+const AWS_SECRET_ACCESS_KEY = process.env.AWS_SECRET_ACCESS_KEY;
+const AWS_REGION = process.env.AWS_REGION || 'eu-north-1';
+
+const CONFIG = {
+  MONGODB_STRING,
+  NODE_ENV,
+  PORT,
+  REDIS_HOST,
+  REDIS_PORT,
+  NOTIF_EMAIL,
+  USER_JWT_SECRET,
+  STORE_JWT_SECRET,
+  ADMIN_JWT_SECRET,
+  USER_REFRESH_SECRET,
+  STORE_REFRESH_SECRET,
+  ADMIN_REFRESH_SECRET,
+  AWS_ACCESS_KEY,
+  AWS_SECRET_ACCESS_KEY,
+  AWS_REGION,
+};
+
+module.exports = { CONFIG };

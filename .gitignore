@@ -1,0 +1,8 @@
+.vscode
+
+node_modules
+
+.env
+.staging_env_peekabox-be-platform
+
+logs

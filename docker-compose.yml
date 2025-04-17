@@ -1,0 +1,38 @@
+version: '3'
+
+services:
+  # MongoDB
+  mongo_db:
+    container_name: database_container
+    image: mongo:6.0
+    restart: always
+    ports:
+      - 27018:27017
+    volumes:
+      - mongo_db:/data/db
+
+  # Redis
+  redis:
+    container_name: redis_container
+    image: redis:latest
+    restart: always
+    ports:
+      - 6379:6379
+    volumes:
+      - redis_data:/data
+
+  # Backend Application
+  app:
+    container_name: peekabox-backend
+    build: .
+    ports:
+      - 4000:8100
+    env_file:
+      - .env.staging
+    depends_on:
+      - mongo_db
+      - redis
+
+volumes:
+  mongo_db: {}
+  redis_data: {}
