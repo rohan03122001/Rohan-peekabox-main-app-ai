@@ -15,9 +15,8 @@ const { OrderValidation } = require('../validations/order.validation');
 
 const { AuthMiddleware } = require('../middleware/auth.middleware');
 const { StoreMiddleware } = require('../middleware/store.middleware');
-const {PaymentController} = require('../Controllers/payment.controller')
-const upload = require('../middleware/imageupload');  // Adjust the path based on where your upload.js is located
-
+const { PaymentController } = require('../Controllers/payment.controller');
+const upload = require('../middleware/imageupload'); // Adjust the path based on where your upload.js is located
 
 const createAuthMiddleware = (options = {}) => {
   const { excludePaths = [] } = options;
@@ -37,6 +36,8 @@ router.use(
       '/auth/triggerOTP',
       '/auth/verifyOTP',
       '/auth/logIn',
+      '/stores/nearby',
+      '/stores/distance',
     ],
   }),
 );
@@ -87,8 +88,6 @@ router.post(
   StoreAuthController.logOut,
 );
 
-
-
 //------------------------------------------------------------------------
 
 // brands
@@ -106,11 +105,18 @@ router.get(
   StoreController.getStoreById,
 );
 
-// get store by radius
+// get store by radius (original)
 router.post(
   '/store/nearby',
   //validateRequest(StoreValidation.getStoreByIdSchema),
   StoreController.getStoreByRadius,
+);
+
+// get stores by distance
+router.get(
+  '/stores/distance',
+  validateRequest(StoreValidation.getStoresByDistanceSchema),
+  StoreController.getStoresByDistance,
 );
 
 router.get(
@@ -156,8 +162,8 @@ router.post(
 );
 
 // Product image upload
-router.post('/ProductUpload', upload.single("image"), (req, res) => {
-  if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+router.post('/ProductUpload', upload.single('image'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
   res.json({ imageUrl: req.file.location }); // Return S3 URL
 });
 
@@ -202,47 +208,43 @@ router.get(
 // Order as complete
 router.post(
   '/:storeId/orders/:orderId/complete',
- //validateRequest(OrderValidation.markCompletedSchema),
- StoreMiddleware.validateStorePermission,
+  //validateRequest(OrderValidation.markCompletedSchema),
+  StoreMiddleware.validateStorePermission,
   OrderController.markCompleted,
 );
 
 // Cancel Order
 router.post(
   '/:storeId/orders/:orderId/cancel',
- //validateRequest(OrderValidation.markCompletedSchema),
- StoreMiddleware.validateStorePermission,
+  //validateRequest(OrderValidation.markCompletedSchema),
+  StoreMiddleware.validateStorePermission,
   OrderController.markCancelled,
 );
 
-// search 
+// search
 router.get('/orders/search', OrderController.searchOrders);
-
 
 //Payments
 
 // add validation later on
 router.get(
   '/payments/:storeId/:page/:pageSize',
-  PaymentController.getPaymentByStoreId
+  PaymentController.getPaymentByStoreId,
 );
 
-// Get total sales , commission , total quantity
+// Get total sales, commission, total quantity
 router.get(
   '/paymentTotalSalesDeatils/:storeId',
-  PaymentController.getTotalSalesDeatils
+  PaymentController.getTotalSalesDeatils,
 );
 
-
-// search 
+// search
 router.get('/payment/search', PaymentController.searchPayment);
 
-
-// Sales 
+// Sales
 router.post(
   '/getDateSalesQuantityByProductId',
-  ProductController.getSalesByProductId
-); 
-
+  ProductController.getSalesByProductId,
+);
 
 module.exports = router;

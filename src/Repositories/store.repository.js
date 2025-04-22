@@ -72,8 +72,6 @@ const getStoreById = async (storeId) => {
   }
 };
 
-
-
 const getStoreByRadius = async (latitude, longitude, radiusInKm) => {
   try {
     const radiusInMeters = radiusInKm * 1000; // MongoDB expects distance in meters
@@ -81,7 +79,7 @@ const getStoreByRadius = async (latitude, longitude, radiusInKm) => {
     const stores = await Store.find({
       location: {
         $near: {
-          $geometry: { type: 'Point', coordinates: [latitude, longitude] },
+          $geometry: { type: 'Point', coordinates: [longitude, latitude] },
           $maxDistance: radiusInMeters,
         },
       },
@@ -90,8 +88,75 @@ const getStoreByRadius = async (latitude, longitude, radiusInKm) => {
 
     return stores;
   } catch (err) {
-    console.error('Error fetching nearby stores:', err);
+    logger.error('Error fetching nearby stores:', err);
     throw err;
+  }
+};
+
+const getStoresByDistance = async ({
+  latitude,
+  longitude,
+  radius = 10,
+  page = 1,
+  limit = 20,
+}) => {
+  try {
+    // Validate
+    if (!latitude || !longitude) {
+      throw new ClientErrors.ValidationError(
+        'Latitude and longitude are required',
+      );
+    }
+
+    // Convert to strings
+    const lat = Number(latitude);
+    const lng = Number(longitude);
+    const radiusInMeters = Number(radius) * 1000; // Convert km to meters
+    const skip = (page - 1) * limit;
+
+    const geoNearStage = {
+      $geoNear: {
+        near: { type: 'Point', coordinates: [lng, lat] },
+        distanceField: 'distance',
+        maxDistance: radiusInMeters,
+        spherical: true,
+        query: { isDeleted: { $ne: true } },
+      },
+    };
+
+    const result = await Store.aggregate([
+      geoNearStage,
+      {
+        $facet: {
+          stores: [{ $skip: skip }, { $limit: limit }],
+          totalCount: [{ $count: 'count' }],
+        },
+      },
+    ]).exec();
+
+    const stores = result[0].stores;
+    const totalCount = result[0].totalCount[0]?.count || 0;
+    const totalPages = Math.ceil(totalCount / limit);
+
+    return {
+      stores,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalCount,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+      },
+    };
+  } catch (error) {
+    logger.error(
+      'Failed to fetch stores by distance',
+      'GET_STORES_BY_DISTANCE',
+      'GET_STORES_BY_DISTANCE_FAILURE',
+      error,
+      { latitude, longitude, radius },
+    );
+    throw error;
   }
 };
 
@@ -167,6 +232,7 @@ const StoreRepository = {
   getStoresByBrandId,
   getStoreById,
   getStoreByRadius,
+  getStoresByDistance,
   deleteStoreById,
   create,
 };

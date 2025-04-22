@@ -11,7 +11,11 @@ const addToUserFavourites = async (req, res, next) => {
       productId,
     });
 
-    return res.status(200).json(favourite);
+    return res.status(200).json({
+      success: true,
+      message: 'Product added to favorites successfully',
+      data: favourite,
+    });
   } catch (error) {
     logger.error(
       'Failed to add to user favourites',
@@ -26,10 +30,18 @@ const addToUserFavourites = async (req, res, next) => {
 
 const getUserFavourites = async (req, res, next) => {
   const userId = req.user?.id;
-  try {
-    const favourites = await FavouriteService.getUserFavourites(userId);
+  const { page, limit } = req.query;
 
-    return res.status(200).json(favourites);
+  try {
+    const favourites = await FavouriteService.getUserFavourites(userId, {
+      page: parseInt(page) || 1,
+      limit: parseInt(limit) || 20,
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: favourites,
+    });
   } catch (error) {
     logger.error(
       'Failed to fetch user favourites',
@@ -52,7 +64,8 @@ const removeFromUserFavourites = async (req, res, next) => {
     });
 
     return res.status(200).json({
-      message: 'product removed from favourites successfully',
+      success: true,
+      message: 'Product removed from favourites successfully',
     });
   } catch (error) {
     logger.error(
@@ -66,10 +79,87 @@ const removeFromUserFavourites = async (req, res, next) => {
   }
 };
 
+// Check if a product is in user's favorites
+const isProductInFavorites = async (req, res, next) => {
+  const userId = req.user?.id;
+  const { productId } = req.params;
+
+  try {
+    const isInFavorites = await FavouriteService.isProductInFavorites({
+      userId,
+      productId,
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: { isInFavorites },
+    });
+  } catch (error) {
+    logger.error(
+      'Failed to check if product is in favorites',
+      'CHECK_PRODUCT_IN_FAVOURITES_FAILURE',
+      'CHECK_PRODUCT_IN_FAVOURITES',
+      error,
+      { userId, productId },
+    );
+    return next(error);
+  }
+};
+
+// Get count of user's favorites
+const getUserFavouritesCount = async (req, res, next) => {
+  const userId = req.user?.id;
+
+  try {
+    const count = await FavouriteService.getUserFavouritesCount(userId);
+
+    return res.status(200).json({
+      success: true,
+      data: { count },
+    });
+  } catch (error) {
+    logger.error(
+      'Failed to get user favourites count',
+      'GET_USER_FAVOURITES_COUNT_FAILURE',
+      'GET_USER_FAVOURITES_COUNT',
+      error,
+      { userId },
+    );
+    return next(error);
+  }
+};
+
+// Clear all favorites for a user
+const clearUserFavourites = async (req, res, next) => {
+  const userId = req.user?.id;
+
+  try {
+    const result = await FavouriteService.clearUserFavourites(userId);
+
+    return res.status(200).json({
+      success: true,
+      message: 'All favorites cleared successfully',
+      data: { deletedCount: result.deletedCount },
+    });
+  } catch (error) {
+    logger.error(
+      'Failed to clear user favourites',
+      'CLEAR_USER_FAVOURITES_FAILURE',
+      'CLEAR_USER_FAVOURITES',
+      error,
+      { userId },
+    );
+    return next(error);
+  }
+};
+
 const FavouriteController = {
   addToUserFavourites,
   getUserFavourites,
   removeFromUserFavourites,
+  isProductInFavorites,
+  getUserFavouritesCount,
+  clearUserFavourites,
 };
 
 module.exports = { FavouriteController };

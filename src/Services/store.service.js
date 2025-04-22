@@ -34,10 +34,10 @@ const getStoreById = async (storeId) => {
 };
 
 
-// store by radius service 
-const getStoreByRadius = async (latitude, longitude,radius) => {
+// Store by radius service 
+const getStoreByRadius = async (latitude, longitude, radius) => {
   try {
-    const store = await StoreRepository.getStoreByRadius(latitude, longitude,radius);
+    const store = await StoreRepository.getStoreByRadius(latitude, longitude, radius);
     return store;
   } catch (error) {
     logger.error(
@@ -45,7 +45,30 @@ const getStoreByRadius = async (latitude, longitude,radius) => {
       'GET_STORE',
       'GET_STORE_BY_ID',
       error,
-      { storeId },
+      { latitude, longitude, radius },
+    );
+    throw error;
+  }
+};
+
+const getStoresByDistance = async (queryOptions) => {
+  try {
+    const { latitude, longitude, radius, page, limit } = queryOptions;
+    const stores = await StoreRepository.getStoresByDistance({
+      latitude, 
+      longitude, 
+      radius,
+      page,
+      limit
+    });
+    return stores;
+  } catch (error) {
+    logger.error(
+      'Failed to fetch stores by distance',
+      'GET_STORES_BY_DISTANCE',
+      'GET_STORES_BY_DISTANCE_FAILURE',
+      error,
+      { latitude: queryOptions.latitude, longitude: queryOptions.longitude }
     );
     throw error;
   }
@@ -89,6 +112,7 @@ const StoreService = {
   getStoresByBrandId,
   getStoreById,
   getStoreByRadius,
+  getStoresByDistance,
   deleteStoreById,
 };
 module.exports = { StoreService };

@@ -3,6 +3,7 @@
 node_modules
 
 .env
+.env copy
 .staging_env_peekabox-be-platform
 
 logs

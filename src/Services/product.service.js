@@ -4,6 +4,7 @@ const logger = require('./../config/logger');
 
 const getProductsByStoreId = (queryOptions) => {
   try {
+    // Pass through all query options including price sorting
     const products = ProductRepository.getProductsByStoreId(queryOptions);
     return products;
   } catch (error) {
@@ -13,6 +14,40 @@ const getProductsByStoreId = (queryOptions) => {
       'GET_PRODUCTS_BY_STORE_ID',
       error,
       { storeId: queryOptions.storeId },
+    );
+    throw error;
+  }
+};
+
+// get products by collection day across all stores
+const getProductsByCollectionDay = (queryOptions) => {
+  try {
+    const products = ProductRepository.getProductsByCollectionDay(queryOptions);
+    return products;
+  } catch (error) {
+    logger.error(
+      'Failed to fetch Products by collection day',
+      'GET_PRODUCTS_BY_COLLECTION_DAY',
+      'GET_PRODUCTS_BY_COLLECTION_DAY_FAILURE',
+      error,
+      { collectionDay: queryOptions.collectionDay },
+    );
+    throw error;
+  }
+};
+
+// New service function to get products by category
+const getProductsByCategory = (queryOptions) => {
+  try {
+    const products = ProductRepository.getProductsByCategory(queryOptions);
+    return products;
+  } catch (error) {
+    logger.error(
+      'Failed to fetch Products by category',
+      'GET_PRODUCTS_BY_CATEGORY',
+      'GET_PRODUCTS_BY_CATEGORY_FAILURE',
+      error,
+      { category: queryOptions.category },
     );
     throw error;
   }
@@ -121,15 +156,16 @@ const checkProductAvailability = async ({
   }
 };
 
-
 // Controller to get sales by productId, storeId, and date
 const getSalesByProductId = async (productId, storeId) => {
   try {
     // Call the service to get sales data
-    const sales = await ProductRepository.getSalesByProductId(productId, storeId);
+    const sales = await ProductRepository.getSalesByProductId(
+      productId,
+      storeId,
+    );
     return sales;
   } catch (error) {
-    
     // Handle any other errors
     return res.status(500).json({ message: 'Internal server error' });
   }
@@ -142,7 +178,9 @@ const ProductService = {
   getProductById,
   deleteStoreProduct,
   checkProductAvailability,
-  getSalesByProductId
+  getSalesByProductId,
+  getProductsByCollectionDay,
+  getProductsByCategory,
 };
 
 module.exports = { ProductService };

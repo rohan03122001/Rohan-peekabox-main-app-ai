@@ -16,13 +16,12 @@ const { StoreController } = require('../Controllers/store.controller');
 const { UserAuthController } = require('../Controllers/userAuth.controller');
 const { UserController } = require('../Controllers/user.controller');
 const { OrderController } = require('../Controllers/order.controller');
+const { ReviewController } = require('../Controllers/review.controller');
+const { FavouriteController } = require('../Controllers/favourite.controller');
+const { PaymentController } = require('../Controllers/payment.controller');
 
 const { AuthMiddleware } = require('../middleware/auth.middleware');
 const { UserMiddleware } = require('../middleware/user.middleware');
-const { ReviewController } = require('../Controllers/review.controller');
-const { FavouriteController } = require('../Controllers/favourite.controller');
-const {PaymentController} = require('../Controllers/payment.controller')
-
 const validateRequest = require('../middleware/validateRequest');
 
 const createAuthMiddleware = (options = {}) => {
@@ -48,7 +47,11 @@ router.use(
   }),
 );
 
-// auth
+//=====================================================================
+// AUTHENTICATION ROUTES
+//=====================================================================
+// These come first as they handle user session management
+
 router.post(
   '/auth/initAuth',
   validateRequest(UserAuthValidation.initAuthSchema),
@@ -90,87 +93,93 @@ router.post(
   UserAuthController.logOut,
 );
 
-// user
+//=====================================================================
+// FIXED PATH ROUTES WITHOUT PARAMETERS
+//=====================================================================
+// These must come BEFORE any routes with path parameters like /:userId
+// Otherwise Express will interpret /favourites as a userId parameter
+
+// Favorites routes
+router.get('/favourites', FavouriteController.getUserFavourites);
+router.get('/favourites/count', FavouriteController.getUserFavouritesCount);
+router.delete('/favourites/clear', FavouriteController.clearUserFavourites);
+
+// Payment routes
+router.post('/paymentSave', PaymentController.storePayment);
+
+// Order creation
+router.post('/order', OrderController.create);
+
+// Get top-rated stores
 router.get(
-  '/:userId',
-  validateRequest(UserValidation.findByIdSchema),
-  UserMiddleware.validateUserPermission,
-  UserController.findById,
+  '/stores/top-rated',
+  validateRequest(ReviewValidation.getStoresSortedByRatingSchema),
+  ReviewController.getStoresSortedByRating,
 );
 
-/*router.post(
-  '/:userId',
-  //validateRequest(UserValidation.updateByIdSchema),
-  UserMiddleware.validateUserPermission,
-  UserController.updateById,
-); */
+// Get products from top-rated stores (instead of rating products directly)
+router.get(
+  '/products/top-rated-stores',
+  validateRequest(ReviewValidation.getProductsFromTopRatedStoresSchema),
+  ReviewController.getProductsFromTopRatedStores,
+);
 
+//=====================================================================
+// ROUTES WITH SPECIFIC PARAMETERS (NOT USER ID)
+//=====================================================================
+// These have parameters but are specific enough that they won't conflict
+
+// Favorites with productId parameter
+router.post(
+  '/favourite/:productId',
+  validateRequest(FavouriteValidation.addToUserFavouritesSchema),
+  FavouriteController.addToUserFavourites,
+);
 router.delete(
-  '/:userId',
-  validateRequest(UserValidation.deleteByIdSchema),
-  UserMiddleware.validateUserPermission,
-  UserController.deleteById,
-); 
-
-// orders
-router.post(
-  '/order',
- // validateRequest(OrderValidation.createSchema),
-  //UserMiddleware.validateUserPermission,
-  //StoreController.checkStoreExistence,
-  //StoreController.checkDeliveryPossibility,
-  //ProductController.checkProductAvailability,
-  OrderController.create,
+  '/favourite/:productId',
+  validateRequest(FavouriteValidation.removeFromUserFavouritesSchema),
+  FavouriteController.removeFromUserFavourites,
+);
+router.get(
+  '/favourite/:productId/check',
+  validateRequest(FavouriteValidation.isProductInFavoritesSchema),
+  FavouriteController.isProductInFavorites,
 );
 
-router.post(
-  '/:userId/orders/:orderId/complete',
- validateRequest(OrderValidation.markCompletedSchema),
-  UserMiddleware.validateUserPermission,
-  OrderController.markCompleted,
+// Products collection routes
+router.get(
+  '/products/collection',
+  validateRequest(ProductValidation.getProductsByCollectionDaySchema),
+  ProductController.getProductsByCollectionDay,
 );
 
 router.get(
-  '/:userId/orders',
- validateRequest(OrderValidation.getOrdersByUserIdSchema),
-  UserMiddleware.validateUserPermission,
-  OrderController.getOrdersByUserId,
+  '/products/category/:category',
+  validateRequest(ProductValidation.getProductsByCategorySchema),
+  ProductController.getProductsByCategory,
 );
 
+// Store routes with distance
 router.get(
-  '/:userId/orders/:orderId',
- validateRequest(OrderValidation.getUserOrderByIdSchema),
-  UserMiddleware.validateUserPermission,
-  OrderController.getUserOrderById,
+  '/stores/distance',
+  validateRequest(StoreValidation.getStoresByDistanceSchema),
+  StoreController.getStoresByDistance,
 );
 
-// brands
+// Brands routes
 router.get(
   '/brands',
- validateRequest(BrandValidation.getBrandsSchema),
+  validateRequest(BrandValidation.getBrandsSchema),
   BrandController.getBrands,
 );
 
 router.get(
   '/brand/:brandId',
- validateRequest(BrandValidation.getBrandByIdSchema),
+  validateRequest(BrandValidation.getBrandByIdSchema),
   BrandController.getBrandById,
 );
 
-// stores
-router.get(
-  '/:storeId',
- validateRequest(StoreValidation.getStoreByIdSchema),
-  StoreController.getStoreById,
-);
-
-router.get(
-  '/brand/:brandId',
- validateRequest(StoreValidation.getStoresByBrandIdSchema),
-  StoreController.getStoresByBrandId,
-);
-
-// products
+// Specific store routes
 router.get(
   '/stores/:storeId/products',
   validateRequest(ProductValidation.getProductsByStoreIdSchema),
@@ -183,7 +192,7 @@ router.get(
   ProductController.getProductById,
 );
 
-// reviews
+// Review routes
 router.get(
   '/stores/:storeId/reviews',
   validateRequest(ReviewValidation.getStoreReviewsSchema),
@@ -208,30 +217,67 @@ router.delete(
   ReviewController.removeStoreReview,
 );
 
-// favourites
-router.post(
-  '/favourite/:productId',
- validateRequest(FavouriteValidation.addToUserFavouritesSchema),
-  FavouriteController.addToUserFavourites,
+// Get store's average rating
+router.get(
+  '/stores/:storeId/rating',
+  validateRequest(ReviewValidation.getStoreAverageRatingSchema),
+  ReviewController.getStoreAverageRating,
 );
 
+//=====================================================================
+// ROUTES WITH GENERIC PATH PARAMETERS (LOWEST PRIORITY)
+//=====================================================================
+// These come last as they have broad path parameters that could match other routes
+
+// User routes
 router.get(
-  '/favourites',
-  validateRequest(FavouriteValidation.getUserFavouritesSchema),
-  FavouriteController.getUserFavourites,
+  '/:userId',
+  validateRequest(UserValidation.findByIdSchema),
+  UserMiddleware.validateUserPermission,
+  UserController.findById,
 );
 
 router.delete(
-  '/favourite/:productId',
-  validateRequest(FavouriteValidation.removeFromUserFavouritesSchema),
-  FavouriteController.removeFromUserFavourites,
+  '/:userId',
+  validateRequest(UserValidation.deleteByIdSchema),
+  UserMiddleware.validateUserPermission,
+  UserController.deleteById,
 );
 
+// User order routes
+router.post(
+  '/:userId/orders/:orderId/complete',
+  validateRequest(OrderValidation.markCompletedSchema),
+  UserMiddleware.validateUserPermission,
+  OrderController.markCompleted,
+);
 
-//Payment 
-// This is just test router to store payment data 
-router.post('/paymentSave',
-  PaymentController.storePayment); 
+router.get(
+  '/:userId/orders',
+  validateRequest(OrderValidation.getOrdersByUserIdSchema),
+  UserMiddleware.validateUserPermission,
+  OrderController.getOrdersByUserId,
+);
 
+router.get(
+  '/:userId/orders/:orderId',
+  validateRequest(OrderValidation.getUserOrderByIdSchema),
+  UserMiddleware.validateUserPermission,
+  OrderController.getUserOrderById,
+);
+
+// Store by ID (must be after more specific store routes)
+router.get(
+  '/:storeId',
+  validateRequest(StoreValidation.getStoreByIdSchema),
+  StoreController.getStoreById,
+);
+
+// Brand stores (must be after more specific brand routes)
+router.get(
+  '/brand/:brandId',
+  validateRequest(StoreValidation.getStoresByBrandIdSchema),
+  StoreController.getStoresByBrandId,
+);
 
 module.exports = router;

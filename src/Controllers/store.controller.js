@@ -47,8 +47,7 @@ const getStoreById = async (req, res, next) => {
   }
 };
 
-
-//get store by radius 
+// Get store by radius - original function
 const getStoreByRadius = async (req, res, next) => {
   try {
     // Extract latitude, longitude, and radius from the request (you can adjust based on your data format)
@@ -56,11 +55,17 @@ const getStoreByRadius = async (req, res, next) => {
 
     // Validate required fields
     if (!latitude || !longitude || !radius) {
-      return res.status(400).json({ message: 'Latitude, longitude, and radius are required' });
+      return res
+        .status(400)
+        .json({ message: 'Latitude, longitude, and radius are required' });
     }
 
     // Call the service to get stores by radius
-    const stores = await StoreService.getStoreByRadius(parseFloat(latitude), parseFloat(longitude), parseFloat(radius));
+    const stores = await StoreService.getStoreByRadius(
+      parseFloat(latitude),
+      parseFloat(longitude),
+      parseFloat(radius),
+    );
 
     // Return the stores within the specified radius
     return res.status(200).json(stores);
@@ -70,20 +75,54 @@ const getStoreByRadius = async (req, res, next) => {
       'GET_STORE',
       'GET_STORE_BY_RADIUS',
       error,
-      { latitude, longitude, radius }
+      { latitude, longitude, radius },
     );
     return next(error);
   }
 };
 
+const getStoresByDistance = async (req, res, next) => {
+  try {
+    // Extract parameters
+    const { latitude, longitude, radius, page, limit } = req.query;
 
+    // Validate
+    if (!latitude || !longitude) {
+      return res.status(400).json({
+        success: false,
+        error: true,
+        data: null,
+        errorMessage: 'Latitude and longitude are required',
+      });
+    }
 
+    const stores = await StoreService.getStoresByDistance({
+      latitude,
+      longitude,
+      radius,
+      page: parseInt(page) || 1,
+      limit: parseInt(limit) || 20,
+    });
+
+    // Return stores sorted by distance
+    return res.status(200).json(stores);
+  } catch (error) {
+    logger.error(
+      'Failed to fetch stores by distance',
+      'GET_STORES_BY_DISTANCE',
+      'GET_STORES_BY_DISTANCE_FAILURE',
+      error,
+      { latitude: req.query.latitude, longitude: req.query.longitude },
+    );
+    return next(error);
+  }
+};
 
 const updateStoreById = async (req, res, next) => {
   try {
     const storeData = req.body;
     // Log the incoming store data
-    console.log("Function is triggered")
+    console.log('Function is triggered');
     logger.info('Received store data:', storeData);
     const { id: storeId } = req.store;
 
@@ -172,6 +211,7 @@ const StoreController = {
   getStoresByBrandId,
   getStoreById,
   getStoreByRadius,
+  getStoresByDistance,
   deleteStoreById,
   checkStoreExistence,
   checkDeliveryPossibility,

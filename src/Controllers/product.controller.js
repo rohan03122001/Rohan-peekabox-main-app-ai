@@ -5,12 +5,14 @@ const { ClientErrors } = require('./../errors/clientErrors');
 const getProductsByStoreId = async (req, res, next) => {
   try {
     const { storeId } = req.params;
-    const { page, limit, sort } = req.query;
+    const { page, limit, sort, priceSort, collectionDay } = req.query;
     const result = await ProductService.getProductsByStoreId({
       storeId,
       page,
       limit,
       sort,
+      priceSort,
+      collectionDay, // Pass the collection day parameter
     });
 
     return res.status(200).json(result);
@@ -21,6 +23,57 @@ const getProductsByStoreId = async (req, res, next) => {
       'GET_PRODUCTS_BY_STORE_ID',
       error,
       { storeId: req.params.storeId },
+    );
+    return next(error);
+  }
+};
+
+//get products by collection day
+const getProductsByCollectionDay = async (req, res, next) => {
+  try {
+    const { page, limit, sort, priceSort, collectionDay, category } = req.query;
+    const result = await ProductService.getProductsByCollectionDay({
+      page,
+      limit,
+      sort,
+      priceSort,
+      collectionDay,
+      category,
+    });
+
+    return res.status(200).json(result);
+  } catch (error) {
+    logger.error(
+      'Failed to fetch Products by collection day',
+      'GET_PRODUCTS_BY_COLLECTION_DAY',
+      'GET_PRODUCTS_BY_COLLECTION_DAY_FAILURE',
+      error,
+    );
+    return next(error);
+  }
+};
+
+//get products by category
+const getProductsByCategory = async (req, res, next) => {
+  try {
+    const { category } = req.params;
+    const { page, limit, sort, priceSort } = req.query;
+    const result = await ProductService.getProductsByCategory({
+      category,
+      page,
+      limit,
+      sort,
+      priceSort,
+    });
+
+    return res.status(200).json(result);
+  } catch (error) {
+    logger.error(
+      'Failed to fetch Products by category',
+      'GET_PRODUCTS_BY_CATEGORY',
+      'GET_PRODUCTS_BY_CATEGORY_FAILURE',
+      error,
+      { category: req.params.category },
     );
     return next(error);
   }
@@ -47,7 +100,7 @@ const getProductById = async (req, res, next) => {
 const createStoreProduct = async (req, res, next) => {
   try {
     const productData = req.body;
-    console.log("Products :" + productData)
+    console.log('Products :' + productData);
 
     const result = await ProductService.createProduct(
       req.params.storeId,
@@ -72,7 +125,7 @@ const verifyProductOwnership = async (req, res, next) => {
 
     const product = await ProductService.getProductById(productId);
 
-    // Check if the store making the request owns the product
+    // Check for the store making the request owns the product
     if (product.storeId.toString() !== storeId.toString()) {
       throw new ClientErrors.UnauthorizedError(
         'Store does not own this product',
@@ -116,7 +169,7 @@ const updateStoreProduct = async (req, res, next) => {
 
 const deleteStoreProduct = async (req, res, next) => {
   try {
-    const { storeId , productId } = req.params;
+    const { storeId, productId } = req.params;
 
     await ProductService.deleteStoreProduct(productId, storeId);
 
@@ -159,16 +212,17 @@ const checkProductAvailability = async (req, res, next) => {
   }
 };
 
-
 // Controller to get sales by productId, storeId, and date
 const getSalesByProductId = async (req, res) => {
   const product = req.body;
   try {
-    const sales = await ProductService.getSalesByProductId(product.productId, product.storeId);
+    const sales = await ProductService.getSalesByProductId(
+      product.productId,
+      product.storeId,
+    );
     return res.status(200).json(sales);
   } catch (error) {
-  
-    // Handle any other errors
+    // Handle errors
     return res.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -182,6 +236,8 @@ const ProductController = {
   getProductById,
   deleteStoreProduct,
   checkProductAvailability,
+  getProductsByCollectionDay,
+  getProductsByCategory,
 };
 
 module.exports = { ProductController };
